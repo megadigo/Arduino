@@ -39,12 +39,16 @@ String motorSet = "FORWARD";
 //RXXX[TT] -- Se Repete XXX vezes      então executa tour TT
 
 // Tours
-String tour = "00";
-// 00 - Idle             00                     --> R010[01]
-// 01 - Scan             01,02,10               --> D050[03] R10[02] 
-// 02 - Avoid <--        01,02,03               --> D010[03] R10[01]
-// 03 - Chace            01,02,04               --> D010[04] R5[02]
-// 04 - Attack           02,05,06               --> D010[04] D050[03] R10[01]
+String tour;
+int stepcount
+
+// Tour                  TourSteps                    TourExits
+// -------------         ---------                    ---------
+// 00 - Idle             00                           R010[01]
+// 01 - Scan             01,02,10                     D050[03] R10[02] 
+// 02 - Avoid            01,02,03                     D010[03] R10[01]
+// 03 - Chace            01,02,04                     D010[04] R5[02]
+// 04 - Attack           02,05,06                     D010[04] D050[03] R10[01]
 
 // Program Blocks
 // 00 - Idle
@@ -60,28 +64,8 @@ String tour = "00";
 // 10 - Rotate 90º
 // 11 - Rotate 180º
 
-// Blynk Event
-//void myTimerEvent()
-//{
-//  // You can send any value at any time.
-//  // Please don't send more that 10 values per second.
-//  Blynk.virtualWrite(V5, millis() / 1000);
-//}
-
-
 void setup() {
   
-  // Serial Setup
-  Serial.begin(9600); // Starts the serial communication
-  Serial.println("Serial connection setup [DONE]");
-
-  // BlueTooth
-  // SerialBLE.begin(9600);
-  
-  // Blynk
-  // Blynk.begin(SerialBLE, auth);
-  // timer.setInterval(1000L, myTimerEvent);
-
   // Neck Setup
   neck.attach(NECK_PIN);
   neck.write(90);
@@ -93,38 +77,46 @@ void setup() {
   MOTOR_RIGHT_FORCE = 1;
   leftMotor.setSpeed(MOTOR_LEFT_FORCE * MOTORS_MAXSPEED - (MOTORS_CALIBRATION_OFFSET / 2)); 
   rightMotor.setSpeed(MOTOR_RIGHT_FORCE * MOTORS_MAXSPEED + (MOTORS_CALIBRATION_OFFSET / 2)); 
-  moveForward();
+  MoveForward();
+  
   //Eye Setup
   pinMode(EYE_TRIGGER_PIN, OUTPUT); // Sets the EYE_TRIGGER_PIN as an Output
   pinMode(EYE_ECHO_PIN, INPUT);  // Sets the EYE_ECHO_PIN as an Input
 
   // Tour Setup
   tour = "00";
-
+  
   
 }
 
 void loop() {
-  NCicles++; 
+  NCicles++;
+   
   // rotate
-  rotateNeck();
+  RotateNeck();
   
   // read sensors
-  readEye();  
+  ReadEye();  
   
   //tour 
-  if(tour = "00") { };  // idle
-  if(tour = "01") { };  // scan
-  if(tour = "02") { };  // avoid
-  if(tour = "03") { };  // chase  
-  if(tour = "03") { };  // attack
+  if(tour = "00"){
+    tour = "02";
+  };  // idle
+  if(tour = "01"){
+  };  // scan
+  if(tour = "02"){
+    Avoid(); 
+  };  // avoid
+  if(tour = "03"){
+  };  // chase  
+  if(tour = "03"){
+  };  // attack
 }
 
 // **************
 // PROGRAM BLOCKS
 // **************
-
-void rotateNeck() {
+void RotateNeck() {
   if(angle <= MIN_NECK_ANGLE) {
     neckrotation = +1;
   } 
@@ -136,8 +128,7 @@ void rotateNeck() {
   delay(45);
   
 }
-
-void readEye() {
+void ReadEye() {
   int duration = 0;
   // Clears the EYE_TRIGGER_PIN
   digitalWrite(EYE_TRIGGER_PIN, LOW);
@@ -151,74 +142,70 @@ void readEye() {
   // Calculating the distance
   distance = duration * 0.034/2; 
 }
-
 void Avoid() {
   if(distance <= EYE_CONTACT) {
     if(angle<90){
-      turnRight(100);
+      TurnRight(100);
     } else {
-      turnLeft(100);
+      TurnLeft(100);
     }
   }
 }
-
 void Chase() {
   if(distance <= EYE_CONTACT) {
     if(angle<90){
-      turnLeft(100);
+      TurnLeft(100);
     } else {
-      turnRight(100);
+      TurnRight(100);
     }
   }
 }
 
+void Rotate90() {
+  motorSet = "LEFT";
+  leftMotor.run(BACKWARD);     // turn motor 1 backward
+  rightMotor.run(FORWARD);      // turn motor 2 forward
+  delay(50); // run motors this way for tt ms
+  MoveForward();
+}
+void Rotate180() {
+  motorSet = "LEFT";
+  leftMotor.run(BACKWARD);     // turn motor 1 backward
+  rightMotor.run(FORWARD);      // turn motor 2 forward
+  delay(50); // run motors this way for tt ms
+  MoveForward();
+}
 
+// **********
+// Functions
+// **********
 
-void moveStop() {
+void MoveStop() {
   leftMotor.run(RELEASE);  // stop the motors.
   rightMotor.run(RELEASE);
 }
-
-void moveForward() {
+void MoveForward() {
   motorSet = "FORWARD";
   leftMotor.run(FORWARD);      // turn it on going forward
   rightMotor.run(FORWARD);      // turn it on going forward
 }
-
-void moveBackward() {
+void MoveBackward() {
   motorSet = "BACKWARD";
   leftMotor.run(BACKWARD);      // turn it on going forward
   rightMotor.run(BACKWARD);     // turn it on going forward
 }
-
-void turnRight(int tt) {
+void TurnRight(int tt) {
   motorSet = "RIGHT";
   leftMotor.run(FORWARD);      // turn motor 1 forward
   rightMotor.run(BACKWARD);     // turn motor 2 backward
   delay(tt); // run motors this way for tt ms
-  moveForward();
+  MoveForward();
 }
-
-void turnLeft(int tt) {
+void TurnLeft(int tt) {
   motorSet = "LEFT";
   leftMotor.run(BACKWARD);     // turn motor 1 backward
   rightMotor.run(FORWARD);      // turn motor 2 forward
   delay(tt); // run motors this way for tt ms
-  moveForward();
+  MoveForward();
 }
 
-void rotare90() {
-  motorSet = "LEFT";
-  leftMotor.run(BACKWARD);     // turn motor 1 backward
-  rightMotor.run(FORWARD);      // turn motor 2 forward
-  delay(50); // run motors this way for tt ms
-  moveForward();
-}
-
-void rotare180() {
-  motorSet = "LEFT";
-  leftMotor.run(BACKWARD);     // turn motor 1 backward
-  rightMotor.run(FORWARD);      // turn motor 2 forward
-  delay(50); // run motors this way for tt ms
-  moveForward();
-}
